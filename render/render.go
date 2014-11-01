@@ -3,17 +3,21 @@ package render
 import (
 	"encoding/json"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
 )
 
+// An interface of suggested methods for rendering output in Go
 type MiloRenderer interface {
 	RenderTemplates(w http.ResponseWriter, r *http.Request, data map[string]interface{}, tpls ...string)
 	RenderJson(w http.ResponseWriter, r *http.Request, data interface{})
 	RegisterTemplateFunc(key string, fn interface{})
+	Redirect(w http.ResponseWriter, r *http.Request, url string, code int)
 }
 
+// Default milo renderer that can cache templates, sets a base template directory.
 type DefaultMiloRenderer struct {
 	templateCache map[string]*template.Template
 	tplDir        string
@@ -21,8 +25,11 @@ type DefaultMiloRenderer struct {
 	cacheTpls     bool
 }
 
+// Create a new default milo renderer.
 func NewDefaultMiloRenderer(tplDir string, cache bool) MiloRenderer {
 	r := &DefaultMiloRenderer{templateCache: make(map[string]*template.Template), tplDir: tplDir, tplFuncs: make(map[string]interface{}), cacheTpls: cache}
+	r.tplFuncs["host"] = Host
+	r.tplFuncs["marshal"] = Marshal
 	return r
 }
 
@@ -33,6 +40,8 @@ func (mr *DefaultMiloRenderer) RenderTemplates(w http.ResponseWriter, r *http.Re
 		w.Write([]byte("Error: Template required!"))
 		return
 	}
+
+	log.Println("Rendering the templates")
 
 	list := make([]string, 0)
 	for _, elem := range tpls {
@@ -72,6 +81,7 @@ func (mr *DefaultMiloRenderer) acquireTemplate(key string, tpls ...string) (*tem
 	return tpl, nil
 }
 
+// Render json output
 func (mr *DefaultMiloRenderer) RenderJson(w http.ResponseWriter, r *http.Request, data interface{}) {
 	if data, err := json.Marshal(data); err != nil {
 		w.WriteHeader(500)
@@ -83,6 +93,12 @@ func (mr *DefaultMiloRenderer) RenderJson(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// Register a template function with the MiloRenderer
 func (mr *DefaultMiloRenderer) RegisterTemplateFunc(key string, fn interface{}) {
 	mr.tplFuncs[key] = fn
+}
+
+// Setup an http redirect on the request.
+func (mr *DefaultMiloRenderer) Redirect(w http.ResponseWriter, r *http.Request, url string, code int) {
+	http.Redirect(w, r, url, code)
 }

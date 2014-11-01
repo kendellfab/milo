@@ -2,6 +2,7 @@ package milo
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 	"os"
@@ -13,43 +14,49 @@ const (
 	BIND_ERR = "bind: address already in use"
 )
 
+type MiloMiddlware func(w http.ResponseWriter, r *http.Request) bool
+
 // This is the default application.
 type Milo struct {
-	config              *Config
+	bind                string
+	port                int
+	portIncrement       bool
 	router              *mux.Router
 	subRoutes           map[string]*mux.Router
 	logger              MiloLogger
-	beforeMiddleware    []http.HandlerFunc
-	afterMiddleware     []http.HandlerFunc
+	beforeMiddleware    []MiloMiddlware
+	afterMiddleware     []MiloMiddlware
 	defaultErrorHandler http.HandlerFunc
 	notFoundHandler     http.HandlerFunc
 }
 
 // Create a new milo app.  Uses the config object.
-func NewMiloApp(c *Config) *Milo {
-	if c == nil {
-		c = DefaultConfig()
-	}
-
+func NewMiloApp(opts ...func(*Milo) error) *Milo {
 	milo := &Milo{
-		config:           c,
 		router:           mux.NewRouter(),
 		subRoutes:        make(map[string]*mux.Router),
 		logger:           newDefaultLogger(),
-		beforeMiddleware: make([]http.HandlerFunc, 0),
-		afterMiddleware:  make([]http.HandlerFunc, 0),
+		beforeMiddleware: make([]MiloMiddlware, 0),
+		afterMiddleware:  make([]MiloMiddlware, 0),
 	}
 	milo.router.NotFoundHandler = milo
+	milo.port = 7000
+	for _, opt := range opts {
+		err := opt(milo)
+		if err != nil {
+			milo.logger.LogFatal(err)
+		}
+	}
 	return milo
 }
 
 // Add after request middleware to the global middleware stack.
-func (m *Milo) RegisterAfter(mw http.HandlerFunc) {
+func (m *Milo) RegisterAfter(mw MiloMiddlware) {
 	m.afterMiddleware = append(m.afterMiddleware, mw)
 }
 
 // Add before request middleware to the global middlware stack.
-func (m *Milo) RegisterBefore(mw http.HandlerFunc) {
+func (m *Milo) RegisterBefore(mw MiloMiddlware) {
 	m.beforeMiddleware = append(m.beforeMiddleware, mw)
 }
 
@@ -109,17 +116,22 @@ func (m *Milo) RouteWebsocket(path string, hf func(ws *websocket.Conn)) {
 	m.router.Path(path).Handler(websocket.Handler(hf))
 }
 
+// Handle assets rooted in different directories.
+func (m *Milo) RouteAsset(prefix, dir string) {
+	m.router.PathPrefix(prefix).Handler(http.FileServer(http.Dir(dir)))
+}
+
+// Handle assets rooted in different directories, strips prefix.
+func (m *Milo) RouteAssetStripPrefix(prefix, dir string) {
+	m.router.PathPrefix(prefix).Handler(http.StripPrefix(prefix, http.FileServer(http.Dir(dir))))
+}
+
 // Binds and runs the application on the given config port.
 func (m *Milo) Run() {
-	m.router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(m.config.AssetDirectory))))
-	if m.config.CatchAll {
-		m.router.PathPrefix("/").Handler(http.FileServer(http.Dir(m.config.AssetDirectory)))
-	}
-	port := m.config.Port
-
-	if m.config.PortIncrement {
+	port := m.port
+	if m.portIncrement {
 		for {
-			err := http.ListenAndServe(m.config.GetConnectionString(), m.router)
+			err := http.ListenAndServe(m.getConnectionString(), m.router)
 			if err != nil {
 				if strings.Contains(err.Error(), BIND_ERR) {
 					port++
@@ -131,7 +143,7 @@ func (m *Milo) Run() {
 			}
 		}
 	} else {
-		if err := http.ListenAndServe(m.config.GetConnectionString(), m.router); err != nil {
+		if err := http.ListenAndServe(m.getConnectionString(), m.router); err != nil {
 			m.logger.LogError(err)
 		}
 	}
@@ -140,7 +152,12 @@ func (m *Milo) Run() {
 // Internal handler for running the route, that way different functions can be exposed but all handled the same.
 func (m *Milo) runRoute(w http.ResponseWriter, r *http.Request, hf http.HandlerFunc, path string) {
 	defer handleError(m, w, r)
-	m.runBeforeMiddleware(w, r)
+	shouldContinue := m.runBeforeMiddleware(w, r)
+	// Something happend in the global middleware and we don't want to continue
+	// This is under the assumption that the middleware handled everything.
+	if !shouldContinue {
+		return
+	}
 	// Call registered handler
 	hf(w, r)
 	m.runAfterMiddlware(w, r)
@@ -149,11 +166,14 @@ func (m *Milo) runRoute(w http.ResponseWriter, r *http.Request, hf http.HandlerF
 }
 
 // Runs before middleware.
-func (m *Milo) runBeforeMiddleware(w http.ResponseWriter, r *http.Request) {
+func (m *Milo) runBeforeMiddleware(w http.ResponseWriter, r *http.Request) bool {
 	// Running before middleware
 	for _, mdw := range m.beforeMiddleware {
-		mdw(w, r)
+		if resp := mdw(w, r); !resp {
+			return resp
+		}
 	}
+	return true
 }
 
 // Runs after middleware
@@ -162,6 +182,11 @@ func (m *Milo) runAfterMiddlware(w http.ResponseWriter, r *http.Request) {
 	for _, mdw := range m.afterMiddleware {
 		mdw(w, r)
 	}
+}
+
+// Get the connection string from the config object.
+func (m *Milo) getConnectionString() string {
+	return fmt.Sprintf("%s:%d", m.bind, m.port)
 }
 
 // ServeHTTP as passed into the notfoundhandler.
@@ -187,4 +212,9 @@ func handleError(m *Milo, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "500 - Internal Server Error.", http.StatusInternalServerError)
 		}
 	}
+}
+
+// Stringer implementation
+func (m *Milo) String() string {
+	return fmt.Sprintf("Bind: %s Port: %d Port Increment: %t", m.bind, m.port, m.portIncrement)
 }
