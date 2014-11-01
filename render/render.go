@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // An interface of suggested methods for rendering output in Go
@@ -23,6 +24,7 @@ type DefaultMiloRenderer struct {
 	tplDir        string
 	tplFuncs      map[string]interface{}
 	cacheTpls     bool
+	sync.RWMutex
 }
 
 // Create a new default milo renderer.
@@ -65,7 +67,10 @@ func (mr *DefaultMiloRenderer) acquireTemplate(key string, tpls ...string) (*tem
 	var ok bool
 
 	if mr.cacheTpls {
-		if tpl, ok = mr.templateCache[key]; ok {
+		mr.RLock()
+		tpl, ok = mr.templateCache[key]
+		mr.RUnlock()
+		if ok {
 			return tpl, nil
 		}
 	}
@@ -76,7 +81,9 @@ func (mr *DefaultMiloRenderer) acquireTemplate(key string, tpls ...string) (*tem
 	}
 
 	if mr.cacheTpls {
+		mr.Lock()
 		mr.templateCache[key] = tpl
+		mr.Unlock()
 	}
 	return tpl, nil
 }

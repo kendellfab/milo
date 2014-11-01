@@ -15,6 +15,7 @@ func main() {
 
 	app := milo.NewMiloApp(milo.SetPort(3030))
 	log.Println(app)
+	rend = render.NewDefaultMiloRenderer("tpls", true)
 
 	app.RegisterBefore(func(w http.ResponseWriter, r *http.Request) bool {
 		log.Println("First Global Before Middleware")
@@ -31,8 +32,6 @@ func main() {
 		log.Println("Second Global Before Middleware")
 		return true
 	})
-
-	rend = render.NewDefaultMiloRenderer("tpls", false)
 
 	app.Route("/", []string{"Get"}, handleRoot)
 	app.Route("/demo", []string{"Get"}, miloMiddleware(redirectMiddleware(handleDemo)))
