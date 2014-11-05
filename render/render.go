@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"encoding/json"
 	"html/template"
 	"log"
@@ -54,7 +55,15 @@ func (mr *DefaultMiloRenderer) RenderTemplates(w http.ResponseWriter, r *http.Re
 		w.WriteHeader(500)
 		w.Write([]byte(loadErr.Error()))
 	} else {
-		tpl.Execute(w, data)
+		var doc bytes.Buffer
+		err := tpl.Execute(&doc, data)
+		if err == nil {
+			w.WriteHeader(200)
+			w.Write(doc.Bytes())
+		} else {
+			w.WriteHeader(500)
+			w.Write([]byte(err.Error()))
+		}
 	}
 }
 
