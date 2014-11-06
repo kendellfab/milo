@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -45,8 +44,6 @@ func (mr *DefaultMiloRenderer) RenderTemplates(w http.ResponseWriter, r *http.Re
 		w.Write([]byte("Error: Template required!"))
 		return
 	}
-
-	log.Println("Rendering the templates")
 
 	list := make([]string, 0)
 	for _, elem := range tpls {
