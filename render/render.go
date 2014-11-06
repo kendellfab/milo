@@ -15,6 +15,8 @@ import (
 type MiloRenderer interface {
 	RenderTemplates(w http.ResponseWriter, r *http.Request, data map[string]interface{}, tpls ...string)
 	RenderJson(w http.ResponseWriter, r *http.Request, data interface{})
+	RenderError(w http.ResponseWriter, r *http.Request, code int, message string)
+	RenderMessage(w http.ResponseWriter, r *http.Request, message string)
 	RegisterTemplateFunc(key string, fn interface{})
 	Redirect(w http.ResponseWriter, r *http.Request, url string, code int)
 }
@@ -107,6 +109,16 @@ func (mr *DefaultMiloRenderer) RenderJson(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusOK)
 		w.Write(data)
 	}
+}
+
+func (mr *DefaultMiloRenderer) RenderError(w http.ResponseWriter, r *http.Request, code int, message string) {
+	w.WriteHeader(code)
+	w.Write([]byte(message))
+}
+
+func (mr *DefaultMiloRenderer) RenderMessage(w http.ResponseWriter, r *http.Request, message string) {
+	w.WriteHeader(200)
+	w.Write([]byte(message))
 }
 
 // Register a template function with the MiloRenderer
