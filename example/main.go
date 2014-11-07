@@ -2,20 +2,19 @@ package main
 
 import (
 	"github.com/kendellfab/milo"
-	"github.com/kendellfab/milo/render"
 	"log"
 	"net/http"
 	"time"
 )
 
-var rend render.MiloRenderer
+var rend milo.Renderer
 
 func main() {
 	log.Println("Milo")
 
 	app := milo.NewMiloApp(milo.SetPort(3030))
 	log.Println(app)
-	rend = render.NewDefaultMiloRenderer("tpls", true, nil)
+	rend = milo.NewDefaultRenderer("tpls", true, nil)
 
 	app.RegisterBefore(func(w http.ResponseWriter, r *http.Request) bool {
 		log.Println("First Global Before Middleware")

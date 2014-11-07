@@ -1,4 +1,4 @@
-package render
+package milo
 
 import (
 	"encoding/json"
