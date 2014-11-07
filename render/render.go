@@ -20,18 +20,24 @@ type MiloRenderer interface {
 	Redirect(w http.ResponseWriter, r *http.Request, url string, code int)
 }
 
+// An interface to define a way to get config items always into template rendering
+type MiloConfiger interface {
+	GetConfig(key string) interface{}
+}
+
 // Default milo renderer that can cache templates, sets a base template directory.
 type DefaultMiloRenderer struct {
 	templateCache map[string]*template.Template
 	tplDir        string
 	tplFuncs      map[string]interface{}
 	cacheTpls     bool
+	configer      MiloConfiger
 	sync.RWMutex
 }
 
 // Create a new default milo renderer.
-func NewDefaultMiloRenderer(tplDir string, cache bool) MiloRenderer {
-	r := &DefaultMiloRenderer{templateCache: make(map[string]*template.Template), tplDir: tplDir, tplFuncs: make(map[string]interface{}), cacheTpls: cache}
+func NewDefaultMiloRenderer(tplDir string, cache bool, configer MiloConfiger) MiloRenderer {
+	r := &DefaultMiloRenderer{templateCache: make(map[string]*template.Template), tplDir: tplDir, tplFuncs: make(map[string]interface{}), cacheTpls: cache, configer: configer}
 	r.tplFuncs["host"] = Host
 	r.tplFuncs["marshal"] = Marshal
 	return r
@@ -44,6 +50,13 @@ func (mr *DefaultMiloRenderer) RenderTemplates(w http.ResponseWriter, r *http.Re
 		w.Write([]byte("Error: Template required!"))
 		return
 	}
+	defaults := make(map[string]interface{})
+	if mr.configer != nil {
+		defaults["config"] = mr.configer
+	}
+	for k, v := range data {
+		defaults[k] = v
+	}
 
 	list := make([]string, 0)
 	for _, elem := range tpls {
@@ -55,7 +68,7 @@ func (mr *DefaultMiloRenderer) RenderTemplates(w http.ResponseWriter, r *http.Re
 		w.Write([]byte(loadErr.Error()))
 	} else {
 		var doc bytes.Buffer
-		err := tpl.Execute(&doc, data)
+		err := tpl.Execute(&doc, defaults)
 		if err == nil {
 			w.WriteHeader(200)
 			w.Write(doc.Bytes())

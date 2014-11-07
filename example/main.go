@@ -15,7 +15,7 @@ func main() {
 
 	app := milo.NewMiloApp(milo.SetPort(3030))
 	log.Println(app)
-	rend = render.NewDefaultMiloRenderer("tpls", true)
+	rend = render.NewDefaultMiloRenderer("tpls", true, nil)
 
 	app.RegisterBefore(func(w http.ResponseWriter, r *http.Request) bool {
 		log.Println("First Global Before Middleware")
