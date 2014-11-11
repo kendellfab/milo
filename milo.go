@@ -191,7 +191,7 @@ func (m *Milo) getConnectionString() string {
 
 // ServeHTTP as passed into the notfoundhandler.
 func (m *Milo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
+	m.logger.Log("404 - Route not found.  " + r.RequestURI)
 	if m.notFoundHandler == nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 - MILO: Route not found."))
