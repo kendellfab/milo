@@ -1,9 +1,9 @@
 package milo
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/websocket"
 	"net/http"
 	"os"
 	"strings"
