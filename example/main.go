@@ -35,6 +35,7 @@ func main() {
 	app.Route("/", []string{"Get"}, handleRoot)
 	app.Route("/demo", []string{"Get"}, miloMiddleware(redirectMiddleware(handleDemo)))
 	app.Route("/landing", []string{"Get"}, miloMiddleware(handleLanding))
+	app.Route("/partial", []string{"Get"}, handlePartial)
 
 	app.RouteAsset("/css", "static")
 	app.RouteAsset("/", "./")
@@ -71,4 +72,12 @@ func handleDemo(w http.ResponseWriter, r *http.Request) {
 
 func handleLanding(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Landing"))
+}
+
+func handlePartial(w http.ResponseWriter, r *http.Request) {
+	data := make(map[string]interface{})
+	data["title"] = "Partials"
+	data["message"] = "A simple partials example."
+	data["footer"] = "Partials footer."
+	rend.RenderTemplates(w, r, data, "partial.tpl")
 }

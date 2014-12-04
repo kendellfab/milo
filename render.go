@@ -40,6 +40,7 @@ func NewDefaultRenderer(tplDir string, cache bool, configer Configer) Renderer {
 	r := &DefaultRenderer{templateCache: make(map[string]*template.Template), tplDir: tplDir, tplFuncs: make(map[string]interface{}), cacheTpls: cache, configer: configer}
 	r.tplFuncs["host"] = Host
 	r.tplFuncs["marshal"] = Marshal
+	r.tplFuncs["partial"] = r.Partial
 	return r
 }
 
@@ -139,4 +140,23 @@ func (mr *DefaultRenderer) RegisterTemplateFunc(key string, fn interface{}) {
 // Setup an http redirect on the request.
 func (mr *DefaultRenderer) Redirect(w http.ResponseWriter, r *http.Request, url string, code int) {
 	http.Redirect(w, r, url, code)
+}
+
+// A template function which can include a partial template.
+func (mr *DefaultRenderer) Partial(name string, payload interface{}) (template.HTML, error) {
+	var buff bytes.Buffer
+	path := filepath.Join(mr.tplDir, "partials", name)
+
+	tpl, loadErr := mr.acquireTemplate(path, path)
+	if loadErr != nil {
+		return "", loadErr
+	}
+
+	execErr := tpl.Execute(&buff, payload)
+
+	if execErr != nil {
+		return "", execErr
+	}
+
+	return template.HTML(string(buff.Bytes())), nil
 }
