@@ -19,6 +19,10 @@ func NewMsgRender(tplDir string) *MsgRender {
 	return m
 }
 
+func (m *MsgRender) RegisterTemplateFunc(key string, fn interface{}) {
+	m.tplFuncs[key] = fn
+}
+
 func (m *MsgRender) Render(data map[string]interface{}, tpls ...string) (string, error) {
 	if len(tpls) < 1 {
 		return "", errors.New("Template identifiers required to render.")
