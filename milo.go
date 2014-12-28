@@ -89,6 +89,19 @@ func (m *Milo) Route(path string, methods []string, hf http.HandlerFunc) {
 	}
 }
 
+// Setup a route to be executed when the specific path prefix is matched, uses the gorilla mux router.
+func (m *Milo) PathPrefix(path string, methods []string, hf http.HandlerFunc) {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		m.runRoute(w, r, hf, path)
+	}
+
+	if methods != nil {
+		m.router.PathPrefix(path).Methods(methods...).HandlerFunc(fn)
+	} else {
+		m.router.PathPrefix(path).HandlerFunc(fn)
+	}
+}
+
 // Setup sub routes for more efficient routing of requests inside of gorilla mux.
 func (m *Milo) SubRoute(prefix, path string, methods []string, hf http.HandlerFunc) {
 	var subRouter *mux.Router
