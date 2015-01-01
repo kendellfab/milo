@@ -34,8 +34,13 @@ func NewRenderer(tplDir string, cache bool, configer Configer) *Renderer {
 	return r
 }
 
-// Takes care of rendering templates from file.
+// Takes care of rendering templates from file, passes a status 200.
 func (mr *Renderer) RenderTemplates(w http.ResponseWriter, r *http.Request, data map[string]interface{}, tpls ...string) {
+	mr.RenderTemplatesCode(w, r, 200, data, tpls...)
+}
+
+// Takes the care of rendering templates, with an explicit status code.
+func (mr *Renderer) RenderTemplatesCode(w http.ResponseWriter, r *http.Request, code int, data map[string]interface{}, tpls ...string) {
 	if len(tpls) < 1 {
 		w.WriteHeader(500)
 		w.Write([]byte("Error: Template required!"))
@@ -61,7 +66,7 @@ func (mr *Renderer) RenderTemplates(w http.ResponseWriter, r *http.Request, data
 		var doc bytes.Buffer
 		err := tpl.Execute(&doc, defaults)
 		if err == nil {
-			w.WriteHeader(200)
+			w.WriteHeader(code)
 			w.Write(doc.Bytes())
 		} else {
 			w.WriteHeader(500)
