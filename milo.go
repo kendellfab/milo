@@ -2,12 +2,13 @@ package milo
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"golang.org/x/net/websocket"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
+	"golang.org/x/net/websocket"
 )
 
 const (
@@ -165,6 +166,8 @@ func (m *Milo) Run() {
 // Internal handler for running the route, that way different functions can be exposed but all handled the same.
 func (m *Milo) runRoute(w http.ResponseWriter, r *http.Request, hf http.HandlerFunc, path string) {
 	defer handleError(m, w, r)
+	// Writing out a request log
+	m.logger.LogInterfaces("Path:", path)
 	shouldContinue := m.runBeforeMiddleware(w, r)
 	// Something happend in the global middleware and we don't want to continue
 	// This is under the assumption that the middleware handled everything.
@@ -174,8 +177,6 @@ func (m *Milo) runRoute(w http.ResponseWriter, r *http.Request, hf http.HandlerF
 	// Call registered handler
 	hf(w, r)
 	m.runAfterMiddlware(w, r)
-	// Writing out a request log
-	m.logger.LogInterfaces("Path:", path)
 }
 
 // Runs before middleware.
