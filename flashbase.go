@@ -47,3 +47,13 @@ func (fb *FlashBase) setFlashMessage(w http.ResponseWriter, r *http.Request, key
 		sess.Save(r, w)
 	}
 }
+
+func (fb *FlashBase) RenderTemplates(w http.ResponseWriter, r *http.Request, data map[string]interface{}, tpls ...string) {
+	if data == nil {
+		data = make(map[string]interface{})
+	}
+
+	data[FlashError], data[FlashSuccess] = fb.GetFlashes(w, r)
+
+	fb.Renderer.RenderTemplates(w, r, data, tpls...)
+}

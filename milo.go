@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"log"
+
 	"github.com/gorilla/mux"
 	"golang.org/x/net/websocket"
 )
@@ -145,7 +147,9 @@ func (m *Milo) Run() {
 	port := m.port
 	if m.portIncrement {
 		for {
-			err := http.ListenAndServe(m.getConnectionString(), m.router)
+			log.Println("Connection:", m.getConnectionString())
+			srv := m.getHTTPServer()
+			err := srv.ListenAndServe()
 			if err != nil {
 				if strings.Contains(err.Error(), BIND_ERR) {
 					port++
@@ -157,9 +161,20 @@ func (m *Milo) Run() {
 			}
 		}
 	} else {
-		if err := http.ListenAndServe(m.getConnectionString(), m.router); err != nil {
+		log.Println("Connection:", m.getConnectionString())
+		srv := m.getHTTPServer()
+		if err := srv.ListenAndServe(); err != nil {
 			m.logger.LogError(err)
 		}
+	}
+}
+
+func (m *Milo) getHTTPServer() *http.Server {
+	return &http.Server{
+		Addr:         m.getConnectionString(),
+		Handler:      m.router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 }
 
