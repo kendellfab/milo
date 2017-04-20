@@ -155,8 +155,8 @@ func contextWithToken(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, tokenKey, token)
 }
 
-func TokenFromContext(ctx context.Context) (*string, bool) {
-	token, ok := ctx.Value(tokenKey).(*string)
+func TokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(tokenKey).(string)
 	return token, ok
 }
 
@@ -164,8 +164,8 @@ func contextWithId(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, idKey, id)
 }
 
-func IdFromContext(ctx context.Context) (*string, bool) {
-	id, ok := ctx.Value(idKey).(*string)
+func IdFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(idKey).(string)
 	return id, ok
 }
 
