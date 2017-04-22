@@ -1,9 +1,12 @@
 package milo
 
 import (
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 // Get the host for the given http request.
@@ -21,4 +24,14 @@ func Host(r *http.Request) string {
 func Marshal(v interface{}) template.JS {
 	a, _ := json.Marshal(v)
 	return template.JS(a)
+}
+
+// Title gets the title for the word.
+func Title(word string) string {
+	return strings.Title(word)
+}
+
+// Gravatar builds links to gravatar.
+func Gravatar(email string, s int) string {
+	return fmt.Sprintf("https://www.gravatar.com/avatar/%x?s=%d", md5.Sum([]byte(email)), s)
 }

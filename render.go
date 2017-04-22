@@ -31,6 +31,8 @@ func NewRenderer(tplDir string, cache bool, configer Configer) *Renderer {
 	r.tplFuncs["host"] = Host
 	r.tplFuncs["marshal"] = Marshal
 	r.tplFuncs["partial"] = r.Partial
+	r.tplFuncs["title"] = Title
+	r.tplFuncs["gravatar"] = Gravatar
 	return r
 }
 
